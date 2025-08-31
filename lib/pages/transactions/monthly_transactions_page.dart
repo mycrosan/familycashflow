@@ -540,40 +540,40 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
             onPressed: () => Navigator.pop(context),
             child: Text('Cancelar'),
           ),
-          ElevatedButton.icon(
+          IconButton(
             onPressed: () {
               Navigator.pop(context);
               _showEditTransactionDialog(transaction);
             },
             icon: Icon(Icons.edit),
-            label: Text('Editar'),
-            style: ElevatedButton.styleFrom(
+            tooltip: 'Editar',
+            style: IconButton.styleFrom(
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
             ),
           ),
           if (transaction.recurringTransactionId != null)
-            ElevatedButton.icon(
+            IconButton(
               onPressed: () {
                 Navigator.pop(context);
                 _showRecurringDeleteOptions(transaction);
               },
               icon: Icon(Icons.delete),
-              label: Text('Remover'),
-              style: ElevatedButton.styleFrom(
+              tooltip: 'Remover',
+              style: IconButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
             )
           else
-            ElevatedButton.icon(
+            IconButton(
               onPressed: () {
                 Navigator.pop(context);
                 _showDeleteConfirmation(transaction);
               },
               icon: Icon(Icons.delete),
-              label: Text('Remover'),
-              style: ElevatedButton.styleFrom(
+              tooltip: 'Remover',
+              style: IconButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
@@ -769,14 +769,14 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
             onPressed: () => Navigator.pop(context),
             child: Text('Cancelar'),
           ),
-          ElevatedButton.icon(
+          IconButton(
             onPressed: () {
               Navigator.pop(context);
               _deleteSingleTransaction(transaction);
             },
             icon: Icon(Icons.delete),
-            label: Text('Excluir'),
-            style: ElevatedButton.styleFrom(
+            tooltip: 'Excluir',
+            style: IconButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
@@ -860,15 +860,15 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
               onPressed: () => Navigator.pop(context, false),
               child: Text('Cancelar'),
             ),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context, true),
-              icon: Icon(Icons.delete_forever),
-              label: Text('Confirmar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
+                      IconButton(
+            onPressed: () => Navigator.pop(context, true),
+            icon: Icon(Icons.delete_forever),
+            tooltip: 'Confirmar',
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
             ),
+          ),
           ],
         ),
       );
