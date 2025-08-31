@@ -51,6 +51,40 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
       
     } catch (e) {
       print('Erro ao carregar dados: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao carregar dados: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Método para recarregar dados após operações de recorrência
+  Future<void> _reloadDataAfterRecurringOperation() async {
+    try {
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      final recurringProvider = Provider.of<RecurringTransactionProvider>(context, listen: false);
+      
+      // Recarregar todos os dados
+      await Future.wait([
+        recurringProvider.loadRecurringTransactions(),
+        transactionProvider.loadAllTransactions(),
+      ]);
+      
+      // Recarregar transações do mês atual
+      await transactionProvider.loadTransactionsForMonth(_selectedMonth);
+      
+      print('Dados recarregados após operação de recorrência');
+      
+    } catch (e) {
+      print('Erro ao recarregar dados: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao recarregar dados: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -60,34 +94,76 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
       final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
       final recurringProvider = Provider.of<RecurringTransactionProvider>(context, listen: false);
       
+      // Recarregar recorrências para garantir dados atualizados
+      await recurringProvider.loadRecurringTransactions();
+      
       final startOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
       final endOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
       
-      // Gerar transações recorrentes
-      final recurringTransactions = await recurringProvider.generateTransactionsFromRecurring(
-        startDate: startOfMonth,
-        endDate: endOfMonth,
-      );
+      print('Gerando transações recorrentes para: ${DateFormat('MMMM yyyy', 'pt_BR').format(_selectedMonth)}');
+      print('Período: ${DateFormat('dd/MM/yyyy').format(startOfMonth)} até ${DateFormat('dd/MM/yyyy').format(endOfMonth)}');
+      print('Recorrências ativas: ${recurringProvider.recurringTransactions.length}');
       
-      print('Transações recorrentes geradas: ${recurringTransactions.length}');
+      // Obter transações existentes do mês
+      final existingTransactions = transactionProvider.getTransactionsForMonth(_selectedMonth);
+      print('Transações existentes no mês: ${existingTransactions.length}');
       
-      // Adicionar transações recorrentes que não existem no banco
-      for (final recurringTransaction in recurringTransactions) {
-        final exists = transactionProvider.transactions.any((t) => 
-          t.recurringTransactionId == recurringTransaction.recurringTransactionId &&
-          t.date.year == recurringTransaction.date.year &&
-          t.date.month == recurringTransaction.date.month &&
-          t.date.day == recurringTransaction.date.day
+      // Verificar se há transações recorrentes existentes que não têm mais recorrência ativa
+      final orphanedRecurringTransactions = existingTransactions.where((t) => 
+        t.recurringTransactionId != null &&
+        !recurringProvider.recurringTransactions.any((rt) => rt.id == t.recurringTransactionId)
+      ).toList();
+      
+      if (orphanedRecurringTransactions.isNotEmpty) {
+        print('Encontradas ${orphanedRecurringTransactions.length} transações órfãs (recorrência removida)');
+        for (final orphanedTransaction in orphanedRecurringTransactions) {
+          print('Removendo transação órfã: ${orphanedTransaction.category} - ${DateFormat('dd/MM/yyyy').format(orphanedTransaction.date)}');
+          await transactionProvider.deleteTransaction(orphanedTransaction.id!);
+        }
+      }
+      
+      // Gerar transações recorrentes apenas se houver recorrências ativas
+      if (recurringProvider.recurringTransactions.isNotEmpty) {
+        final recurringTransactions = await recurringProvider.generateTransactionsFromRecurring(
+          startDate: startOfMonth,
+          endDate: endOfMonth,
         );
         
-        if (!exists) {
-          print('Adicionando transação recorrente: ${recurringTransaction.notes ?? 'Sem descrição'} - ${recurringTransaction.date}');
-          await transactionProvider.addTransaction(recurringTransaction);
+        print('Transações recorrentes geradas: ${recurringTransactions.length}');
+        
+        // Adicionar transações recorrentes que não existem no banco
+        int addedCount = 0;
+        for (final recurringTransaction in recurringTransactions) {
+          // Verificar se já existe uma transação com a mesma data e recorrência
+          final exists = existingTransactions.any((t) => 
+            t.recurringTransactionId == recurringTransaction.recurringTransactionId &&
+            t.date.year == recurringTransaction.date.year &&
+            t.date.month == recurringTransaction.date.month &&
+            t.date.day == recurringTransaction.date.day
+          );
+          
+          if (!exists) {
+            print('Adicionando transação recorrente: ${recurringTransaction.category} - ${DateFormat('dd/MM/yyyy').format(recurringTransaction.date)}');
+            await transactionProvider.addTransaction(recurringTransaction);
+            addedCount++;
+          } else {
+            print('Transação recorrente já existe: ${recurringTransaction.category} - ${DateFormat('dd/MM/yyyy').format(recurringTransaction.date)}');
+          }
         }
+        
+        print('Transações recorrentes adicionadas: $addedCount');
+      } else {
+        print('Nenhuma recorrência ativa encontrada');
       }
       
     } catch (e) {
       print('Erro ao gerar transações recorrentes: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao gerar transações recorrentes: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -133,6 +209,11 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: Icon(Icons.today),
+            onPressed: _goToCurrentMonth,
+            tooltip: 'Mês Atual',
+          ),
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () => _showAddTransactionDialog(context),
@@ -860,43 +941,98 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
               onPressed: () => Navigator.pop(context, false),
               child: Text('Cancelar'),
             ),
-                      IconButton(
-            onPressed: () => Navigator.pop(context, true),
-            icon: Icon(Icons.delete_forever),
-            tooltip: 'Confirmar',
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+            IconButton(
+              onPressed: () => Navigator.pop(context, true),
+              icon: Icon(Icons.delete_forever),
+              tooltip: 'Confirmar',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
             ),
-          ),
           ],
         ),
       );
 
       if (confirmed != true) return;
 
+      print('Iniciando remoção de transação recorrente: ${transaction.category}');
+      print('ID da recorrência: ${transaction.recurringTransactionId}');
+
       // Remover a transação atual
-      await transactionProvider.deleteTransaction(transaction.id!);
+      final deleteResult = await transactionProvider.deleteTransaction(transaction.id!);
+      if (!deleteResult) {
+        throw Exception('Erro ao remover transação atual');
+      }
+      print('Transação atual removida com sucesso');
       
       // Se é uma transação recorrente, remover a recorrência
       if (transaction.recurringTransactionId != null) {
-        // Encontrar e remover a recorrência
+        // Recarregar recorrências para garantir que temos os dados mais atualizados
+        await recurringProvider.loadRecurringTransactions();
+        
+        // Encontrar a recorrência
         final recurringTransactions = recurringProvider.recurringTransactions;
-        final recurringTransaction = recurringTransactions.firstWhere(
-          (rt) => rt.id == transaction.recurringTransactionId,
-          orElse: () => throw Exception('Recorrência não encontrada'),
-        );
+        print('Recorrências disponíveis: ${recurringTransactions.length}');
+        print('IDs das recorrências: ${recurringTransactions.map((rt) => rt.id).toList()}');
         
-        await recurringProvider.deleteRecurringTransaction(recurringTransaction.id!);
+        RecurringTransaction? recurringTransaction;
+        try {
+          recurringTransaction = recurringTransactions.firstWhere(
+            (rt) => rt.id == transaction.recurringTransactionId,
+          );
+        } catch (e) {
+          print('Recorrência não encontrada no provider. Tentando remover apenas as transações futuras...');
+          recurringTransaction = null;
+        }
         
-        // Remover todas as transações futuras desta recorrência
-        final futureTransactions = transactionProvider.transactions.where(
-          (t) => t.recurringTransactionId == transaction.recurringTransactionId &&
-                 t.date.isAfter(transaction.date)
-        ).toList();
-        
-        for (final futureTransaction in futureTransactions) {
-          await transactionProvider.deleteTransaction(futureTransaction.id!);
+        if (recurringTransaction != null) {
+          print('Recorrência encontrada: ${recurringTransaction.category}');
+          
+          // Remover todas as transações futuras desta recorrência primeiro
+          final allTransactions = transactionProvider.transactions;
+          final futureTransactions = allTransactions.where(
+            (t) => t.recurringTransactionId == transaction.recurringTransactionId &&
+                   t.date.isAfter(transaction.date)
+          ).toList();
+          
+          print('Transações futuras encontradas: ${futureTransactions.length}');
+          
+          for (final futureTransaction in futureTransactions) {
+            print('Removendo transação futura: ${futureTransaction.category} - ${DateFormat('dd/MM/yyyy').format(futureTransaction.date)}');
+            await transactionProvider.deleteTransaction(futureTransaction.id!);
+          }
+          
+          // Remover a recorrência
+          final recurringDeleteResult = await recurringProvider.deleteRecurringTransaction(recurringTransaction.id!);
+          if (!recurringDeleteResult) {
+            throw Exception('Erro ao remover recorrência');
+          }
+          print('Recorrência removida com sucesso');
+        } else {
+          // Se a recorrência não foi encontrada, apenas remover as transações futuras
+          print('Recorrência não encontrada, removendo apenas transações futuras...');
+          
+          final allTransactions = transactionProvider.transactions;
+          final futureTransactions = allTransactions.where(
+            (t) => t.recurringTransactionId == transaction.recurringTransactionId &&
+                   t.date.isAfter(transaction.date)
+          ).toList();
+          
+          print('Transações futuras encontradas: ${futureTransactions.length}');
+          
+          for (final futureTransaction in futureTransactions) {
+            print('Removendo transação futura: ${futureTransaction.category} - ${DateFormat('dd/MM/yyyy').format(futureTransaction.date)}');
+            await transactionProvider.deleteTransaction(futureTransaction.id!);
+          }
+          
+          // Tentar remover a recorrência diretamente do banco se ela existir
+          try {
+            await recurringProvider.deleteRecurringTransaction(transaction.recurringTransactionId!);
+            print('Recorrência removida diretamente do banco');
+          } catch (e) {
+            print('Recorrência já não existe no banco: $e');
+          }
         }
       }
       
@@ -908,9 +1044,10 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
         ),
       );
       
-      _loadMonthData();
+      await _reloadDataAfterRecurringOperation();
       
     } catch (e) {
+      print('Erro ao excluir transação recorrente: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao excluir transação recorrente: $e'),
