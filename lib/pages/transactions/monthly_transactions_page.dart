@@ -116,7 +116,21 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Transações Mensais'),
+        title: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Buscar transações...',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Colors.white70),
+            prefixIcon: Icon(Icons.search, color: Colors.white70),
+          ),
+          style: TextStyle(color: Colors.white, fontSize: 16),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value;
+            });
+          },
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
@@ -250,56 +264,34 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
         padding: EdgeInsets.all(16),
-        child: Column(
+        child: Row(
           children: [
-            // Campo de busca
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Buscar transações',
-                hintText: 'Digite para buscar...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+            Expanded(
+              child: FilterChip(
+                label: Text('Receitas'),
+                selected: _showIncome,
+                onSelected: (selected) {
+                  setState(() {
+                    _showIncome = selected;
+                  });
+                },
+                selectedColor: Colors.green.withOpacity(0.2),
+                checkmarkColor: Colors.green,
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
             ),
-            SizedBox(height: 16),
-            
-            // Filtros de tipo
-            Row(
-              children: [
-                Expanded(
-                  child: FilterChip(
-                    label: Text('Receitas'),
-                    selected: _showIncome,
-                    onSelected: (selected) {
-                      setState(() {
-                        _showIncome = selected;
-                      });
-                    },
-                    selectedColor: Colors.green.withOpacity(0.2),
-                    checkmarkColor: Colors.green,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: FilterChip(
-                    label: Text('Despesas'),
-                    selected: _showExpense,
-                    onSelected: (selected) {
-                      setState(() {
-                        _showExpense = selected;
-                      });
-                    },
-                    selectedColor: Colors.red.withOpacity(0.2),
-                    checkmarkColor: Colors.red,
-                  ),
-                ),
-              ],
+            SizedBox(width: 8),
+            Expanded(
+              child: FilterChip(
+                label: Text('Despesas'),
+                selected: _showExpense,
+                onSelected: (selected) {
+                  setState(() {
+                    _showExpense = selected;
+                  });
+                },
+                selectedColor: Colors.red.withOpacity(0.2),
+                checkmarkColor: Colors.red,
+              ),
             ),
           ],
         ),
@@ -464,7 +456,7 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
               ),
           ],
         ),
-        onTap: () => _showTransactionDetails(transaction),
+        onTap: () => _showTransactionEditMode(transaction),
         onLongPress: () => _showTransactionOptions(transaction),
       ),
     );
@@ -478,28 +470,114 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
     ).format(value);
   }
 
-  void _showTransactionDetails(Transaction transaction) {
+  void _showTransactionEditMode(Transaction transaction) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Detalhes da Transação'),
+        title: Row(
+          children: [
+            Icon(
+              transaction.value > 0 ? Icons.trending_up : Icons.trending_down,
+              color: transaction.value > 0 ? Colors.green : Colors.red,
+            ),
+            SizedBox(width: 8),
+            Text('Editar Transação'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Categoria: ${transaction.category}'),
-            Text('Valor: ${_formatCurrency(transaction.value)}'),
-            Text('Membro: ${transaction.associatedMember.name}'),
-            Text('Data: ${DateFormat('dd/MM/yyyy').format(transaction.date)}'),
-            if (transaction.notes != null) Text('Observações: ${transaction.notes}'),
-            if (transaction.recurringTransactionId != null) Text('Transação Recorrente: Sim'),
+            // Informações da transação
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Categoria: ${transaction.category}',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 4),
+                    Text('Valor: ${_formatCurrency(transaction.value)}'),
+                    Text('Membro: ${transaction.associatedMember.name}'),
+                    Text('Data: ${DateFormat('dd/MM/yyyy').format(transaction.date)}'),
+                    if (transaction.notes != null) Text('Observações: ${transaction.notes}'),
+                    if (transaction.recurringTransactionId != null) 
+                      Container(
+                        margin: EdgeInsets.only(top: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Transação Recorrente',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Escolha uma ação:',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Fechar'),
+            child: Text('Cancelar'),
           ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _showEditTransactionDialog(transaction);
+            },
+            icon: Icon(Icons.edit),
+            label: Text('Editar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          if (transaction.recurringTransactionId != null)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _showRecurringDeleteOptions(transaction);
+              },
+              icon: Icon(Icons.delete),
+              label: Text('Remover'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(transaction);
+              },
+              icon: Icon(Icons.delete),
+              label: Text('Remover'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+            ),
         ],
       ),
     );
@@ -567,48 +645,283 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
     });
   }
 
-  void _showDeleteConfirmation(Transaction transaction) {
+  void _showRecurringDeleteOptions(Transaction transaction) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmar Exclusão'),
-        content: Text('Tem certeza que deseja excluir esta transação?'),
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Remover Transação Recorrente'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Esta é uma transação recorrente. Escolha como deseja removê-la:',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Transação: ${transaction.category}',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text('Valor: ${_formatCurrency(transaction.value)}'),
+                    Text('Data: ${DateFormat('dd/MM/yyyy').format(transaction.date)}'),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Opções de remoção:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              _deleteTransaction(transaction);
+              _deleteSingleTransaction(transaction);
             },
-            child: Text('Excluir', style: TextStyle(color: Colors.red)),
+            icon: Icon(Icons.delete_outline),
+            label: Text('Apenas este'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteRecurringTransaction(transaction);
+            },
+            icon: Icon(Icons.delete_forever),
+            label: Text('Este e futuros'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _deleteTransaction(Transaction transaction) async {
+  void _showDeleteConfirmation(Transaction transaction) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.delete, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Confirmar Exclusão'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tem certeza que deseja excluir esta transação?',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Transação: ${transaction.category}',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text('Valor: ${_formatCurrency(transaction.value)}'),
+                    Text('Data: ${DateFormat('dd/MM/yyyy').format(transaction.date)}'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteSingleTransaction(transaction);
+            },
+            icon: Icon(Icons.delete),
+            label: Text('Excluir'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteSingleTransaction(Transaction transaction) async {
     try {
       final provider = Provider.of<TransactionProvider>(context, listen: false);
       final success = await provider.deleteTransaction(transaction.id!);
       
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Transação excluída com sucesso')),
+          SnackBar(
+            content: Text('Transação excluída com sucesso'),
+            backgroundColor: Colors.green,
+          ),
         );
         _loadMonthData();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao excluir transação')),
+          SnackBar(
+            content: Text('Erro ao excluir transação'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao excluir transação: $e')),
+        SnackBar(
+          content: Text('Erro ao excluir transação: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
+  }
+
+  Future<void> _deleteRecurringTransaction(Transaction transaction) async {
+    try {
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      final recurringProvider = Provider.of<RecurringTransactionProvider>(context, listen: false);
+      
+      // Mostrar diálogo de confirmação final
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Confirmação Final'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Esta ação irá:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('• Remover esta transação'),
+              Text('• Remover a recorrência associada'),
+              Text('• Remover todas as transações futuras desta recorrência'),
+              SizedBox(height: 16),
+              Text(
+                'Esta ação não pode ser desfeita!',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: Icon(Icons.delete_forever),
+              label: Text('Confirmar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      // Remover a transação atual
+      await transactionProvider.deleteTransaction(transaction.id!);
+      
+      // Se é uma transação recorrente, remover a recorrência
+      if (transaction.recurringTransactionId != null) {
+        // Encontrar e remover a recorrência
+        final recurringTransactions = recurringProvider.recurringTransactions;
+        final recurringTransaction = recurringTransactions.firstWhere(
+          (rt) => rt.id == transaction.recurringTransactionId,
+          orElse: () => throw Exception('Recorrência não encontrada'),
+        );
+        
+        await recurringProvider.deleteRecurringTransaction(recurringTransaction.id!);
+        
+        // Remover todas as transações futuras desta recorrência
+        final futureTransactions = transactionProvider.transactions.where(
+          (t) => t.recurringTransactionId == transaction.recurringTransactionId &&
+                 t.date.isAfter(transaction.date)
+        ).toList();
+        
+        for (final futureTransaction in futureTransactions) {
+          await transactionProvider.deleteTransaction(futureTransaction.id!);
+        }
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Transação recorrente e todas as futuras foram removidas'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      
+      _loadMonthData();
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao excluir transação recorrente: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Método legado para compatibilidade
+  Future<void> _deleteTransaction(Transaction transaction) async {
+    await _deleteSingleTransaction(transaction);
   }
 }
