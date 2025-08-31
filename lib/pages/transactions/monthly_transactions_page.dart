@@ -124,11 +124,6 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
             onPressed: () => _showAddTransactionDialog(context),
             tooltip: 'Adicionar Transação',
           ),
-          IconButton(
-            icon: Icon(Icons.repeat),
-            onPressed: () => _showAddRecurringTransactionDialog(context),
-            tooltip: 'Criar Recorrência',
-          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -173,10 +168,6 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  TextButton(
-                    onPressed: _goToCurrentMonth,
-                    child: Text('Mês Atual'),
                   ),
                 ],
               ),
