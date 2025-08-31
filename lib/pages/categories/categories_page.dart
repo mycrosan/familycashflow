@@ -138,20 +138,20 @@ class _CategoriesPageState extends State<CategoriesPage> {
                       margin: EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: _getCategoryColor(category.tipo).withOpacity(0.1),
+                          backgroundColor: _getCategoryColor(category.type).withOpacity(0.1),
                           child: Text(
-                            category.icone ?? '📁',
+                            category.icon ?? '📁',
                             style: TextStyle(fontSize: 20),
                           ),
                         ),
                         title: Text(
-                          category.nome,
+                          category.name,
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
                         subtitle: Text(
-                          _getCategoryTypeLabel(category.tipo),
+                          _getCategoryTypeLabel(category.type),
                           style: TextStyle(
-                            color: _getCategoryColor(category.tipo),
+                            color: _getCategoryColor(category.type),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -366,7 +366,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirmar Exclusão'),
-        content: Text('Tem certeza que deseja excluir a categoria "${category.nome}"?'),
+        content: Text('Tem certeza que deseja excluir a categoria "${category.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

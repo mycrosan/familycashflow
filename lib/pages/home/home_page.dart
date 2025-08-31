@@ -150,7 +150,7 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return _buildHomeTab();
       case 1:
-        return MonthlyTransactionsPage();
+        return TransacoesMensaisPage();
       case 2:
         return ReportsPage();
       case 3:
