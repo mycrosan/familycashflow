@@ -35,7 +35,17 @@ Fluxo Família é um aplicativo móvel para gerenciamento financeiro pessoal e f
 - **Ativação/Desativação**: Controle de status das transações recorrentes
 - **Geração Automática**: Criação automática de transações baseadas na recorrência
 
-### ✅ Entrada Rápida
+### ✅ Tela Unificada de Transações
+- **Interface Unificada**: Uma única tela para adicionar transações (receitas e despesas)
+- **Máscara de Valores**: Formatação automática em Real (R$) com separadores de milhares e centavos
+- **Opção de Recorrência**: Toggle para marcar transações como recorrentes
+- **Configuração de Recorrência**: Frequência (diária, semanal, mensal, anual) com intervalo personalizável
+- **Data de Fim**: Opção para definir data limite ou número máximo de ocorrências
+- **Validação Inteligente**: Verificação automática de campos obrigatórios
+- **Edição Completa**: Suporte para editar transações e recorrências existentes
+- **Navegação Intuitiva**: Campos organizados logicamente com feedback visual
+
+### ✅ Entrada Rápida (Legado)
 - **Interface Otimizada**: Formulário simplificado para transações rápidas
 - **Seleção Inteligente**: Categorias e membros baseados no tipo de transação
 - **Validação**: Verificação de campos obrigatórios
@@ -86,9 +96,17 @@ Fluxo Família é um aplicativo móvel para gerenciamento financeiro pessoal e f
 - **TransactionProvider**: Transações financeiras
 - **RecurringTransactionProvider**: Transações recorrentes
 - **ReportProvider**: Relatórios e análises
-- **QuickEntryProvider**: Entrada rápida de transações
+- **QuickEntryProvider**: Entrada rápida de transações (legado)
 - **NotificationProvider**: Sistema de notificações
 - **SyncProvider**: Sincronização com API
+
+### Páginas Principais
+- **HomePage**: Dashboard principal com navegação por abas
+- **AddTransactionPage**: Tela unificada para adicionar/editar transações e recorrências
+- **MonthlyTransactionsPage**: Visualização e gestão de transações mensais
+- **ReportsPage**: Relatórios e análises financeiras
+- **MembersPage**: Gestão de membros da família
+- **CategoriesPage**: Gestão de categorias de transações
 
 ### Serviços
 - **DatabaseService**: Gerenciamento do banco de dados local
@@ -178,3 +196,21 @@ Este projeto está em desenvolvimento ativo. Contribuições são bem-vindas!
 ## Licença
 
 Este projeto é privado e não possui licença pública.
+
+Flutter 3.24 (stable)
+
+Dart 3.5
+
+Android Studio (SDK 33+ e emulador)
+
+Java 11 ou 17
+
+Git + VS Code (com extensões de Flutter e Dart)
+
+Xcode (se for Mac/iOS)
+fvm install 3.24.0
+fvm global 3.24.0
+fvm use 3.24.0
+
+
+fvm flutter run -d 11836f8

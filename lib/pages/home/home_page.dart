@@ -6,7 +6,7 @@ import '../../providers/report_provider.dart';
 import '../../providers/quick_entry_provider.dart';
 import '../../providers/auth_provider.dart';
 
-import '../quick_entry/quick_entry_page.dart';
+import '../transactions/add_transaction_page.dart';
 import '../transactions/monthly_transactions_page.dart';
 import '../reports/reports_page.dart';
 import '../members/members_page.dart';
@@ -134,7 +134,7 @@ class _HomePageState extends State<HomePage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => QuickEntryPage()),
+            MaterialPageRoute(builder: (context) => AddTransactionPage()),
           );
         },
         backgroundColor: Theme.of(context).primaryColor,
@@ -378,7 +378,7 @@ class _HomePageState extends State<HomePage> {
                     () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => QuickEntryPage()),
+                        MaterialPageRoute(builder: (context) => AddTransactionPage()),
                       );
                     },
                   ),
@@ -392,7 +392,7 @@ class _HomePageState extends State<HomePage> {
                     () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => QuickEntryPage()),
+                        MaterialPageRoute(builder: (context) => AddTransactionPage()),
                       );
                     },
                   ),

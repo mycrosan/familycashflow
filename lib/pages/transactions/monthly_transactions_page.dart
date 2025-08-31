@@ -5,8 +5,7 @@ import '../../providers/transaction_provider.dart';
 import '../../providers/recurring_transaction_provider.dart';
 import '../../models/transaction.dart';
 import '../../models/recurring_transaction.dart';
-import '../recurring/add_recurring_transaction_page.dart';
-import '../quick_entry/quick_entry_page.dart';
+import '../transactions/add_transaction_page.dart';
 
 class MonthlyTransactionsPage extends StatefulWidget {
   @override
@@ -28,7 +27,7 @@ class _MonthlyTransactionsPageState extends State<MonthlyTransactionsPage> {
     });
   }
 
-  void _loadMonthData() {
+  void _loadMonthData() async {
     try {
       print('Carregando dados para o mês: ${_selectedMonth.month}/${_selectedMonth.year}');
       
@@ -37,23 +36,58 @@ class _MonthlyTransactionsPageState extends State<MonthlyTransactionsPage> {
       
       print('Providers obtidos com sucesso');
       
-      // Carregar transações primeiro
-      transactionProvider.loadTransactionsForMonth(_selectedMonth).then((_) {
-        print('Transações carregadas: ${transactionProvider.transactions.length}');
-        print('Transações do mês: ${transactionProvider.getTransactionsForMonth(_selectedMonth).length}');
-      }).catchError((e) {
-        print('Erro ao carregar transações: $e');
-      });
+      // Carregar recorrências primeiro
+      await recurringProvider.loadRecurringTransactions();
+      print('Recorrências carregadas: ${recurringProvider.recurringTransactions.length}');
       
-      // Carregar recorrências
-      recurringProvider.loadRecurringTransactions().then((_) {
-        print('Recorrências carregadas: ${recurringProvider.recurringTransactions.length}');
-      }).catchError((e) {
-        print('Erro ao carregar recorrências: $e');
-      });
+      // Carregar transações do mês
+      await transactionProvider.loadTransactionsForMonth(_selectedMonth);
+      print('Transações carregadas: ${transactionProvider.transactions.length}');
+      
+      // Gerar transações recorrentes para o mês selecionado
+      await _generateRecurringTransactionsForMonth();
+      
+      print('Transações do mês após geração: ${transactionProvider.getTransactionsForMonth(_selectedMonth).length}');
       
     } catch (e) {
       print('Erro ao carregar dados: $e');
+    }
+  }
+
+  // Gerar transações recorrentes para o mês selecionado
+  Future<void> _generateRecurringTransactionsForMonth() async {
+    try {
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      final recurringProvider = Provider.of<RecurringTransactionProvider>(context, listen: false);
+      
+      final startOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+      final endOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+      
+      // Gerar transações recorrentes
+      final recurringTransactions = await recurringProvider.generateTransactionsFromRecurring(
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+      );
+      
+      print('Transações recorrentes geradas: ${recurringTransactions.length}');
+      
+      // Adicionar transações recorrentes que não existem no banco
+      for (final recurringTransaction in recurringTransactions) {
+        final exists = transactionProvider.transactions.any((t) => 
+          t.recurringTransactionId == recurringTransaction.recurringTransactionId &&
+          t.date.year == recurringTransaction.date.year &&
+          t.date.month == recurringTransaction.date.month &&
+          t.date.day == recurringTransaction.date.day
+        );
+        
+        if (!exists) {
+          print('Adicionando transação recorrente: ${recurringTransaction.notes ?? 'Sem descrição'} - ${recurringTransaction.date}');
+          await transactionProvider.addTransaction(recurringTransaction);
+        }
+      }
+      
+    } catch (e) {
+      print('Erro ao gerar transações recorrentes: $e');
     }
   }
 
@@ -579,29 +613,35 @@ class _MonthlyTransactionsPageState extends State<MonthlyTransactionsPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => QuickEntryPage(),
+        builder: (context) => AddTransactionPage(),
       ),
-    );
+    ).then((_) {
+      _loadMonthData();
+    });
   }
 
   void _showAddRecurringTransactionDialog(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddRecurringTransactionPage(),
+        builder: (context) => AddTransactionPage(),
       ),
-    );
+    ).then((_) {
+      _loadMonthData();
+    });
   }
 
   void _showEditTransactionDialog(Transaction transaction) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => QuickEntryPage(
+        builder: (context) => AddTransactionPage(
           transactionToEdit: transaction,
         ),
       ),
-    );
+    ).then((_) {
+      _loadMonthData();
+    });
   }
 
   void _showDeleteConfirmation(Transaction transaction) {
