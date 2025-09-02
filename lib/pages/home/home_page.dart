@@ -131,11 +131,16 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => AddTransactionPage()),
           );
+          
+          // Se retornou com sucesso, atualizar dados
+          if (result == true) {
+            _refreshData();
+          }
         },
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
@@ -375,11 +380,16 @@ class _HomePageState extends State<HomePage> {
                     'Adicionar Receita',
                     Icons.add_circle,
                     Colors.green,
-                    () {
-                      Navigator.push(
+                    () async {
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => AddTransactionPage()),
                       );
+                      
+                      // Se retornou com sucesso, atualizar dados
+                      if (result == true) {
+                        _refreshData();
+                      }
                     },
                   ),
                 ),
@@ -389,11 +399,16 @@ class _HomePageState extends State<HomePage> {
                     'Adicionar Despesa',
                     Icons.remove_circle,
                     Colors.red,
-                    () {
-                      Navigator.push(
+                    () async {
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => AddTransactionPage()),
                       );
+                      
+                      // Se retornou com sucesso, atualizar dados
+                      if (result == true) {
+                        _refreshData();
+                      }
                     },
                   ),
                 ),
@@ -473,6 +488,19 @@ class _HomePageState extends State<HomePage> {
 
   void _refreshMonthData() {
     context.read<ReportProvider>().generateMonthlyReport(_selectedMonth);
+  }
+
+  void _refreshData() {
+    final transactionProvider = context.read<TransactionProvider>();
+    final reportProvider = context.read<ReportProvider>();
+    final quickEntryProvider = context.read<QuickEntryProvider>();
+    
+    // Atualizar dados em paralelo
+    Future.wait([
+      transactionProvider.refresh(),
+      reportProvider.generateMonthlyReport(_selectedMonth),
+      quickEntryProvider.loadRecentTransactions(),
+    ]);
   }
 }
 

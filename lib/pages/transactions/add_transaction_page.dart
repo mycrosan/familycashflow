@@ -10,6 +10,8 @@ import '../../providers/transaction_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/member_provider.dart';
 import '../../providers/recurring_transaction_provider.dart';
+import '../../providers/report_provider.dart';
+import '../../providers/quick_entry_provider.dart';
 
 // Enum para tipo de transação
 enum TransactionType { income, expense }
@@ -200,7 +202,11 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         .replaceAll('R\$ ', '')
         .replaceAll('.', '')
         .replaceAll(',', '.');
-    return double.tryParse(cleanValue)?.toString() ?? '0.0';
+    final value = double.tryParse(cleanValue) ?? 0.0;
+    
+    // Aplicar sinal baseado no tipo de transação
+    final finalValue = _selectedType == TransactionType.expense ? -value.abs() : value.abs();
+    return finalValue.toString();
   }
 
   void _handleSave() async {
@@ -226,14 +232,61 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       }
       
       if (mounted) {
-        Navigator.of(context).pop(true);
+        // Mostrar mensagem de sucesso
+        final tipoTransacao = _isRecurring ? 'Transação Recorrente' : 'Transação';
+        final tipoValor = _selectedType == TransactionType.income ? 'Receita' : 'Despesa';
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$tipoTransacao salva com sucesso! ($tipoValor)'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'Ver',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+            ),
+          ),
+        );
+        
+        // Atualizar dados da tela inicial
+        await _updateHomeData();
+        
+        // Aguardar um pouco antes de fechar
+        await Future.delayed(Duration(milliseconds: 500));
+        
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao salvar: $e')),
+          SnackBar(
+            content: Text('Erro ao salvar: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
+    }
+  }
+
+  Future<void> _updateHomeData() async {
+    try {
+      final transactionProvider = context.read<TransactionProvider>();
+      final reportProvider = context.read<ReportProvider>();
+      final quickEntryProvider = context.read<QuickEntryProvider>();
+      
+      // Atualizar dados em paralelo
+      await Future.wait([
+        transactionProvider.refresh(),
+        reportProvider.generateMonthlyReport(DateTime.now()),
+        quickEntryProvider.loadRecentTransactions(),
+      ]);
+    } catch (e) {
+      print('Erro ao atualizar dados da tela inicial: $e');
     }
   }
 

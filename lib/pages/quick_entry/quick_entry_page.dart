@@ -4,6 +4,7 @@ import '../../providers/quick_entry_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/member_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/report_provider.dart';
 import '../../models/category.dart';
 import '../../models/member.dart';
 import '../../models/transaction.dart';
@@ -34,6 +35,23 @@ class _QuickEntryPageState extends State<QuickEntryPage> {
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  Future<void> _updateHomeData() async {
+    try {
+      final transactionProvider = context.read<TransactionProvider>();
+      final reportProvider = context.read<ReportProvider>();
+      final quickEntryProvider = context.read<QuickEntryProvider>();
+      
+      // Atualizar dados em paralelo
+      await Future.wait([
+        transactionProvider.refresh(),
+        reportProvider.generateMonthlyReport(DateTime.now()),
+        quickEntryProvider.loadRecentTransactions(),
+      ]);
+    } catch (e) {
+      print('Erro ao atualizar dados da tela inicial: $e');
+    }
   }
 
   @override
@@ -447,18 +465,34 @@ class _QuickEntryPageState extends State<QuickEntryPage> {
       }
 
       if (success) {
-        // Mostrar mensagem de sucesso
+        // Mostrar mensagem de sucesso com detalhes
+        final action = widget.transactionToEdit != null ? 'atualizada' : 'salva';
+        final tipoValor = _selectedType == 'income' ? 'Receita' : 'Despesa';
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.transactionToEdit != null 
-              ? 'Transação atualizada com sucesso!' 
-              : 'Transação salva com sucesso!'),
+            content: Text('Transação $action com sucesso! ($tipoValor)'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'Ver',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+            ),
           ),
         );
         
-        // Voltar para a página anterior
-        Navigator.pop(context);
+        // Atualizar dados da tela inicial
+        await _updateHomeData();
+        
+        // Aguardar um pouco antes de fechar
+        await Future.delayed(Duration(milliseconds: 500));
+        
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

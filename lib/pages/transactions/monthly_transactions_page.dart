@@ -691,15 +691,17 @@ class _TransacoesMensaisPageState extends State<TransacoesMensaisPage> {
     );
   }
 
-  void _showAddTransactionDialog(BuildContext context) {
-    Navigator.push(
+  void _showAddTransactionDialog(BuildContext context) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddTransactionPage(),
       ),
-    ).then((_) {
+    );
+    
+    if (result == true) {
       _loadMonthData();
-    });
+    }
   }
 
   void _showAddRecurringTransactionDialog(BuildContext context) {

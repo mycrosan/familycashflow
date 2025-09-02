@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import '../../providers/recurring_transaction_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/member_provider.dart';
+import '../../providers/transaction_provider.dart';
+import '../../providers/report_provider.dart';
+import '../../providers/quick_entry_provider.dart';
 import '../../models/category.dart';
 import '../../models/member.dart';
 import '../../models/recurring_transaction.dart';
@@ -586,7 +589,22 @@ class _AddRecurringTransactionPageState extends State<AddRecurringTransactionPag
 
     try {
       final value = double.parse(_valueController.text.replaceAll(',', '.'));
-      final finalValue = value > 0 ? value : -value.abs();
+      
+      // Determinar o tipo baseado na categoria selecionada
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final category = categoryProvider.categories.firstWhere(
+        (cat) => cat.name == _selectedCategory,
+        orElse: () => Category(
+          name: _selectedCategory,
+          type: 'expense',
+          userId: 1,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      
+      // Aplicar sinal baseado no tipo da categoria
+      final finalValue = category.type == 'income' ? value.abs() : -value.abs();
 
       // Remover criação de objeto não utilizado
       // final recurringTransaction = RecurringTransaction(...);
@@ -633,17 +651,42 @@ class _AddRecurringTransactionPageState extends State<AddRecurringTransactionPag
       }
 
       if (success) {
+        // Mostrar mensagem de sucesso com detalhes
+        final action = widget.recurringTransactionToEdit != null ? 'atualizada' : 'criada';
+        final tipoValor = finalValue > 0 ? 'Receita' : 'Despesa';
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.recurringTransactionToEdit != null 
-            ? 'Transação recorrente atualizada com sucesso!' 
-            : 'Transação recorrente criada com sucesso!')),
+          SnackBar(
+            content: Text('Transação recorrente $action com sucesso! ($tipoValor)'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Ver',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+            ),
+          ),
         );
-        Navigator.pop(context);
+        
+        // Atualizar dados da tela inicial
+        await _updateHomeData();
+        
+        // Aguardar um pouco antes de fechar
+        await Future.delayed(Duration(milliseconds: 500));
+        
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.recurringTransactionToEdit != null 
-            ? 'Erro ao atualizar transação recorrente' 
-            : 'Erro ao criar transação recorrente')),
+          SnackBar(
+            content: Text(widget.recurringTransactionToEdit != null 
+              ? 'Erro ao atualizar transação recorrente' 
+              : 'Erro ao criar transação recorrente'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
@@ -654,6 +697,23 @@ class _AddRecurringTransactionPageState extends State<AddRecurringTransactionPag
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _updateHomeData() async {
+    try {
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      final reportProvider = Provider.of<ReportProvider>(context, listen: false);
+      final quickEntryProvider = Provider.of<QuickEntryProvider>(context, listen: false);
+      
+      // Atualizar dados em paralelo
+      await Future.wait([
+        transactionProvider.refresh(),
+        reportProvider.generateMonthlyReport(DateTime.now()),
+        quickEntryProvider.loadRecentTransactions(),
+      ]);
+    } catch (e) {
+      print('Erro ao atualizar dados da tela inicial: $e');
     }
   }
 

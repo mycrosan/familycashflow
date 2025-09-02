@@ -83,6 +83,64 @@ class _AdicionarLancamentoState extends State<AdicionarLancamento> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Seletor de tipo de lançamento
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tipo de Lançamento',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => setState(() => _tipo = 'saida'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _tipo == 'saida' ? Colors.red : Colors.grey[300],
+                              foregroundColor: _tipo == 'saida' ? Colors.white : Colors.black87,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.remove_circle_outline, size: 20),
+                                SizedBox(width: 8),
+                                Text('Despesa', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => setState(() => _tipo = 'entrada'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _tipo == 'entrada' ? Colors.green : Colors.grey[300],
+                              foregroundColor: _tipo == 'entrada' ? Colors.white : Colors.black87,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_circle_outline, size: 20),
+                                SizedBox(width: 8),
+                                Text('Receita', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
             TextFormField(
               controller: _descricaoController,
               decoration: InputDecoration(labelText: 'Descrição'),
