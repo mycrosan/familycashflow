@@ -45,7 +45,7 @@ class _QuickEntryPageState extends State<QuickEntryPage> {
       
       // Atualizar dados em paralelo
       await Future.wait([
-        transactionProvider.refresh(),
+        transactionProvider.loadAllTransactions(), // Carregar todas as transações
         reportProvider.generateMonthlyReport(DateTime.now()),
         quickEntryProvider.loadRecentTransactions(),
       ]);

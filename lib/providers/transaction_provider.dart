@@ -188,13 +188,12 @@ class TransactionProvider extends ChangeNotifier {
       final id = await _databaseService.insertTransaction(transaction);
       final newTransaction = transaction.copyWith(id: id);
       
-      _transactions.add(newTransaction);
-      _sortTransactions();
-      
       // Log para sincronização
       await _databaseService.logSyncAction('lancamentos', id, 'create');
       
-      notifyListeners();
+      // Atualizar lista de forma inteligente
+      await updateAfterAddTransaction(newTransaction);
+      
     } catch (e) {
       _setError('Erro ao adicionar transação: $e');
     } finally {
@@ -376,6 +375,27 @@ class TransactionProvider extends ChangeNotifier {
       loadMembers(),
       loadCategories(),
     ]);
+  }
+
+  // Atualizar lista após adicionar transação
+  Future<void> updateAfterAddTransaction(Transaction transaction) async {
+    try {
+      // Se a transação é do mês atual, recarregar transações do mês
+      final currentMonth = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+      final transactionMonth = DateTime(transaction.date.year, transaction.date.month, 1);
+      
+      if (currentMonth.isAtSameMomentAs(transactionMonth)) {
+        // Recarregar transações do mês para garantir que a nova transação apareça
+        await loadMonthlyTransactions();
+      } else {
+        // Se não é do mês atual, apenas adicionar à lista geral
+        _transactions.add(transaction);
+        _sortTransactions();
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Erro ao atualizar lista após adicionar transação: $e');
+    }
   }
 
   // Inicialização

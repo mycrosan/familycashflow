@@ -497,7 +497,7 @@ class _HomePageState extends State<HomePage> {
     
     // Atualizar dados em paralelo
     Future.wait([
-      transactionProvider.refresh(),
+      transactionProvider.loadAllTransactions(), // Carregar todas as transações
       reportProvider.generateMonthlyReport(_selectedMonth),
       quickEntryProvider.loadRecentTransactions(),
     ]);
